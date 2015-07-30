@@ -1351,6 +1351,40 @@ PyMODINIT_FUNC initqd(void)
     if (PyType_Ready(&PyDDTypeObjectType) < 0)
             return;
 
+    // Pi as DD
+    m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
+    c_dd_pi( ((PyDDTypeObject *) m)->content_data );
+    PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "pi", m );
+    // E as DD
+    m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
+    c_dd_read(
+      "2.7182818284590452353602874713526624977572470936999595749669676277241", 
+      ((PyDDTypeObject *) m)->content_data);
+    PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "e", m );
+    // Gamma as DD
+    m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
+    c_dd_read(
+      "0.5772156649015328606065120900824024310421593359399235988057672348849",
+      ((PyDDTypeObject *) m)->content_data);
+    PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "gamma", m );
+
+    // Pi as QD
+    m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
+    c_qd_pi( ((PyQDTypeObject *) m)->content_data );
+    PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "pi", m );
+    // E as QD
+    m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
+    c_qd_read(
+      "2.7182818284590452353602874713526624977572470936999595749669676277241",
+      ((PyQDTypeObject *) m)->content_data);
+    PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "e", m );
+    // Gamma as QD
+    m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
+    c_qd_read(
+      "0.5772156649015328606065120900824024310421593359399235988057672348849",
+      ((PyQDTypeObject *) m)->content_data);
+    PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "gamma", m );
+
     m = Py_InitModule3("qd", functions,
                        "Interface to the libqd library.");
     if (m == NULL)
