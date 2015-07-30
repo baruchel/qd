@@ -45,6 +45,7 @@ Now you can start computing with both types:
     c = b.sqrt()
     c < 3.0
     d = qd.QD.pi # Some constants are pre-defined
+    d.cos()
         ... etc. ...
 
 You can mix the DD and QD types with many other numerical types but try to mix them with float numbers rather than integer numbers (computation will be slower with integer numbers). If you want to mix them with other high-precision modules, convert your numbers to string before converting them to DD or QD types (otherwise they will first be converted to float numbers and you will lose precision).

@@ -182,6 +182,13 @@ static PyObject *DD_clone(PyDDTypeObject *self) {
     return o;
 }
 
+static PyObject *DD_random(void) {
+    PyObject *o;
+    o = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
+    c_dd_rand( ((PyQDTypeObject *) o)->content_data );
+    return o;
+}
+
 static PyObject *DD_get_address(PyDDTypeObject *self) {
     return PyInt_FromLong( (long) self->content_data );
 }
@@ -584,6 +591,7 @@ static PyMethodDef DD_methods[] = {
     {"npwr",(PyCFunction) DD_npwr, METH_VARARGS,"Compute x**n for a DD instance."},
     {"nroot",(PyCFunction) DD_nroot, METH_VARARGS,"Compute x**(1/n) for a DD instance."},
     {"atan2",(PyCFunction) DD_atan2, METH_STATIC,"Static function for computing atan2(x,y)."},
+    {"random",(PyCFunction) DD_random, METH_STATIC,"Static function for getting a random number."},
     {NULL}
 };
 static PyNumberMethods DD_number_methods = {
@@ -837,6 +845,13 @@ static PyObject *QD_clone(PyQDTypeObject *self) {
     ((PyQDTypeObject *) o)->content_data[1] = self->content_data[1];
     ((PyQDTypeObject *) o)->content_data[2] = self->content_data[2];
     ((PyQDTypeObject *) o)->content_data[3] = self->content_data[3];
+    return o;
+}
+
+static PyObject *QD_random(void) {
+    PyObject *o;
+    o = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
+    c_qd_rand( ((PyQDTypeObject *) o)->content_data );
     return o;
 }
 
@@ -1244,6 +1259,7 @@ static PyMethodDef QD_methods[] = {
     {"npwr",(PyCFunction) QD_npwr, METH_VARARGS,"Compute x**n for a QD instance."},
     {"nroot",(PyCFunction) QD_nroot, METH_VARARGS,"Compute x**(1/n) for a QD instance."},
     {"atan2",(PyCFunction) QD_atan2, METH_STATIC,"Static function for computing atan2(x,y)."},
+    {"random",(PyCFunction) QD_random, METH_STATIC,"Static function for getting a random number."},
     {NULL}
 };
 static PyNumberMethods QD_number_methods = {
