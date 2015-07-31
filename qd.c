@@ -1440,37 +1440,43 @@ PyMODINIT_FUNC initqd(void)
     m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
     c_dd_pi( ((PyDDTypeObject *) m)->content_data );
     PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "pi", m );
+    Py_DECREF(m);
     // E as DD
     m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
     c_dd_read( const_e, ((PyDDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "e", m );
+    Py_DECREF(m);
     // Gamma as DD
     m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
     c_dd_read( const_gamma, ((PyDDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "gamma", m );
+    Py_DECREF(m);
 
     // Pi as QD
     m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
     c_qd_pi( ((PyQDTypeObject *) m)->content_data );
     PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "pi", m );
+    Py_DECREF(m);
     // E as QD
     m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
     c_qd_read( const_e, ((PyQDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "e", m );
+    Py_DECREF(m);
     // Gamma as QD
     m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
     c_qd_read( const_gamma, ((PyQDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "gamma", m );
+    Py_DECREF(m);
 
     m = Py_InitModule3("qd", functions,
                        "Interface to the libqd library.");
     if (m == NULL)
             return;
 
-    Py_INCREF(&PyQDTypeObjectType);
     Py_INCREF(&PyDDTypeObjectType);
-    PyModule_AddObject(m, "QD", (PyObject *)&PyQDTypeObjectType);
     PyModule_AddObject(m, "DD", (PyObject *)&PyDDTypeObjectType);
+    Py_INCREF(&PyQDTypeObjectType);
+    PyModule_AddObject(m, "QD", (PyObject *)&PyQDTypeObjectType);
 
 #ifdef WITH_NUMPY
     PyArray_Descr *QD_dtype;
