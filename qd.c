@@ -1391,6 +1391,7 @@ static PyArray_Descr NumpyQDArray = {
                                  * '>' (big), '<' (little), '|'
                                  * (not-applicable), or '=' (native).
                                  */
+        // TODO: Check whether GETITEM is required (try to replace with 0)
         NPY_USE_GETITEM,        /* flags describing data type */
         0,                      /* number representing this type */
         4*sizeof(double),       /* element size for this type */
@@ -1420,6 +1421,7 @@ static PyArray_Descr NumpyQDArray = {
 
 static void QDArr_copyswap(void *dst, void *src, int swap, void *arr)
 {
+        fprintf(stdout,"DEBUG: copyswap (swap=%d)\n",swap);
     if (src != NULL) 
 	memcpy(dst, src, 4*sizeof(double));
     
@@ -1429,13 +1431,11 @@ static void QDArr_copyswap(void *dst, void *src, int swap, void *arr)
         a = ((double *)dst); b = a + 3;
 	c = *a; *a++ = *b; *b-- = c;
 	c = *a; *a++ = *b; *b-- = c;
-	c = *a; *a++ = *b; *b-- = c;
-	c = *a; *a++ = *b; *b   = c;	
     }
 }
 
 static PyObject *QDArr_getitem(char *ip, PyArrayObject *ap) {
-        // Example found on internet:
+        // Simpler example found on internet:
 // cdef object getitem(hobj_ref_t *ip, ndarray ap):
 //     cdef reference ret
 //     ret = reference(None)
@@ -1451,8 +1451,8 @@ static PyObject *QDArr_getitem(char *ip, PyArrayObject *ap) {
 	a[3] = *((double *)ip + 3);
     }
     else {
-	ap->descr->f->copyswap(a, ip, !PyArray_ISNOTSWAPPED(ap),
-			       ap);
+        fprintf(stdout,"DEBUG: getitem (case 2)\n");
+	ap->descr->f->copyswap(a, ip, !PyArray_ISNOTSWAPPED(ap), ap);
     }
     o = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
     ((PyQDTypeObject *) o)->content_data[0] = a[0];
@@ -1464,19 +1464,30 @@ static PyObject *QDArr_getitem(char *ip, PyArrayObject *ap) {
 
 static int QDArr_setitem(PyObject *op, char *ov, PyArrayObject *ap) {
     double a[4];
-    
+
     if(PyObject_TypeCheck(op, &PyQDTypeObjectType)) {
-	PyErr_SetString(PyExc_TypeError, "must be a QD instance");
-	return -1;
+        a[0] = ((PyQDTypeObject *) op)->content_data[0];
+        a[1] = ((PyQDTypeObject *) op)->content_data[1];
+        a[2] = ((PyQDTypeObject *) op)->content_data[2];
+        a[3] = ((PyQDTypeObject *) op)->content_data[3];
+    } else {
+        PyObject *o;
+        o = PyTuple_Pack(1, op);
+        op = PyObject_CallObject((PyObject *)&PyQDTypeObjectType, o);
+        Py_DECREF(o);
+        a[0] = ((PyQDTypeObject *) op)->content_data[0];
+        a[1] = ((PyQDTypeObject *) op)->content_data[1];
+        a[2] = ((PyQDTypeObject *) op)->content_data[2];
+        a[3] = ((PyQDTypeObject *) op)->content_data[3];
+        Py_DECREF(op);
     }
 
     if (ap == NULL || PyArray_ISBEHAVED(ap)) {
-        // TODO FAUX : copier content_data !
 	memcpy(ov, a, 4*sizeof(double));
     }
     else {
-	ap->descr->f->copyswap(ov, a, !PyArray_ISNOTSWAPPED(ap),
-			       ap);
+        fprintf(stdout,"DEBUG: setitem (case 2)\n");
+	ap->descr->f->copyswap(ov, a, !PyArray_ISNOTSWAPPED(ap), ap);
     }
     return 0;
 }
@@ -1549,7 +1560,7 @@ PyMODINIT_FUNC initqd(void)
     QDArr_functions.copyswap = QDArr_copyswap;
     QDArr_functions.getitem = (PyArray_GetItemFunc *) QDArr_getitem;
     QDArr_functions.setitem = (PyArray_SetItemFunc *) QDArr_setitem;
-    //NumpyQDArray.ob_type = &PyArrayDescr_Type;
+    NumpyQDArray.ob_type = &PyArrayDescr_Type;
     QD_dtype = PyArray_DescrFromType( PyArray_RegisterDataType( &NumpyQDArray ) );
     Py_XINCREF(QD_dtype);
     if( QD_dtype != NULL) {
