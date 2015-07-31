@@ -1,6 +1,6 @@
 // comment the following line for disabling Numpy
 // DON'T UNCOMMENT THIS LINE; SUPPORT IS FAR FROM BEING READY!!!
-//#define WITH_NUMPY
+// #define WITH_NUMPY
 
 #include <Python.h>
 #include <qd/c_qd.h>
@@ -1391,7 +1391,7 @@ static PyArray_Descr NumpyQDArray = {
                                  * '>' (big), '<' (little), '|'
                                  * (not-applicable), or '=' (native).
                                  */
-        0, //NPY_USE_GETITEM,        /* flags describing data type */
+        NPY_USE_GETITEM,        /* flags describing data type */
         0,                      /* number representing this type */
         4*sizeof(double),       /* element size for this type */
         _ALIGN(double),         /* alignment needed for this type TODO: check*/
@@ -1417,6 +1417,69 @@ static PyArray_Descr NumpyQDArray = {
 
         //PyObject *metadata,     /* Metadata about this dtype */
 };
+
+static void QDArr_copyswap(void *dst, void *src, int swap, void *arr)
+{
+    if (src != NULL) 
+	memcpy(dst, src, 4*sizeof(double));
+    
+    if (swap) { // TODO !
+        double *a, *b;
+        double c;
+        a = ((double *)dst); b = a + 3;
+	c = *a; *a++ = *b; *b-- = c;
+	c = *a; *a++ = *b; *b-- = c;
+	c = *a; *a++ = *b; *b-- = c;
+	c = *a; *a++ = *b; *b   = c;	
+    }
+}
+
+static PyObject *QDArr_getitem(char *ip, PyArrayObject *ap) {
+        // Example found on internet:
+// cdef object getitem(hobj_ref_t *ip, ndarray ap):
+//     cdef reference ret
+//     ret = reference(None)
+//     ret.ref = ip[0]
+//     return ret
+    PyObject *o;
+    double a[4];
+ 
+    if ((ap==NULL) || PyArray_ISBEHAVED_RO(ap)) {
+	a[0] = *((double *)ip);
+	a[1] = *((double *)ip + 1);
+	a[2] = *((double *)ip + 2);
+	a[3] = *((double *)ip + 3);
+    }
+    else {
+	ap->descr->f->copyswap(a, ip, !PyArray_ISNOTSWAPPED(ap),
+			       ap);
+    }
+    o = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
+    ((PyQDTypeObject *) o)->content_data[0] = a[0];
+    ((PyQDTypeObject *) o)->content_data[1] = a[1];
+    ((PyQDTypeObject *) o)->content_data[2] = a[2];
+    ((PyQDTypeObject *) o)->content_data[3] = a[3];
+    return o;
+}
+
+static int QDArr_setitem(PyObject *op, char *ov, PyArrayObject *ap) {
+    double a[4];
+    
+    if(PyObject_TypeCheck(op, &PyQDTypeObjectType)) {
+	PyErr_SetString(PyExc_TypeError, "must be a QD instance");
+	return -1;
+    }
+
+    if (ap == NULL || PyArray_ISBEHAVED(ap)) {
+        // TODO FAUX : copier content_data !
+	memcpy(ov, a, 4*sizeof(double));
+    }
+    else {
+	ap->descr->f->copyswap(ov, a, !PyArray_ISNOTSWAPPED(ap),
+			       ap);
+    }
+    return 0;
+}
 
 #endif // WITH_NUMPY
 
@@ -1480,8 +1543,12 @@ PyMODINIT_FUNC initqd(void)
 
 #ifdef WITH_NUMPY
     PyArray_Descr *QD_dtype;
+
     import_array();
     PyArray_InitArrFuncs(&QDArr_functions);
+    QDArr_functions.copyswap = QDArr_copyswap;
+    QDArr_functions.getitem = (PyArray_GetItemFunc *) QDArr_getitem;
+    QDArr_functions.setitem = (PyArray_SetItemFunc *) QDArr_setitem;
     //NumpyQDArray.ob_type = &PyArrayDescr_Type;
     QD_dtype = PyArray_DescrFromType( PyArray_RegisterDataType( &NumpyQDArray ) );
     Py_XINCREF(QD_dtype);
