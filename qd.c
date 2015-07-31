@@ -1,3 +1,7 @@
+// comment the following line for disabling Numpy
+// DON'T UNCOMMENT THIS LINE; SUPPORT IS FAR FROM BEING READY!!!
+//#define WITH_NUMPY
+
 #include <Python.h>
 #include <qd/c_qd.h>
 #include <qd/c_dd.h>
@@ -1356,9 +1360,74 @@ static PyMethodDef functions[] = {
         { NULL, NULL, 0, NULL }
 };
 
+/*
+ *
+ * Numpy Part
+ *
+ */
+#ifdef WITH_NUMPY
+
+//#include <numpy/npy_common.h>
+//#include <numpy/ndarrayobject.h>
+//#include <numpy/ndarraytypes.h>
+#include <structmember.h> // for offsetof macro
+#include <numpy/arrayobject.h>
+
+#define _ALIGN(type) offsetof(struct { char c; type v;}, v)
+        
+static PyArray_ArrFuncs QDArr_functions;
+
+static PyArray_Descr NumpyQDArray = {
+        PyObject_HEAD_INIT(NULL)
+        &PyQDTypeObjectType,    /*
+                                 * the type object representing an
+                                 * instance of this type -- should not
+                                 * be two type_numbers with the same type
+                                 * object.
+                                 */
+        'V',                    /* kind for this type */
+        '0',                    /* unique-character representing this type */
+        '|',                    /*
+                                 * '>' (big), '<' (little), '|'
+                                 * (not-applicable), or '=' (native).
+                                 */
+        0, //NPY_USE_GETITEM,        /* flags describing data type */
+        0,                      /* number representing this type */
+        4*sizeof(double),       /* element size for this type */
+        _ALIGN(double),         /* alignment needed for this type TODO: check*/
+        NULL,                   /*
+                                 * Non-NULL if this type is
+                                 * is an array (C-contiguous)
+                                 * of some other type
+                                 */
+        NULL,                 /* The fields dictionary for this type
+                                 * For statically defined descr this
+                                 * is always Py_None
+                                 */
+
+        NULL,                   /*
+                                 * An ordered tuple of field names or NULL
+                                 * if no fields are defined
+                                 */
+
+        &QDArr_functions,        /* PyArray_ArrFuncs *f;
+                                  * a table of functions specific for each
+                                  * basic data descriptor
+                                  */
+
+        //PyObject *metadata,     /* Metadata about this dtype */
+};
+
+#endif // WITH_NUMPY
+
+// Initialize the module
 PyMODINIT_FUNC initqd(void)
 {
     PyObject* m;
+    char *const_e=
+      "2.7182818284590452353602874713526624977572470936999595749669676277241";
+    char *const_gamma=
+      "0.5772156649015328606065120900824024310421593359399235988057672348849";
 
     PyQDTypeObjectType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyQDTypeObjectType) < 0)
@@ -1373,15 +1442,11 @@ PyMODINIT_FUNC initqd(void)
     PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "pi", m );
     // E as DD
     m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
-    c_dd_read(
-      "2.7182818284590452353602874713526624977572470936999595749669676277241", 
-      ((PyDDTypeObject *) m)->content_data);
+    c_dd_read( const_e, ((PyDDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "e", m );
     // Gamma as DD
     m = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
-    c_dd_read(
-      "0.5772156649015328606065120900824024310421593359399235988057672348849",
-      ((PyDDTypeObject *) m)->content_data);
+    c_dd_read( const_gamma, ((PyDDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "gamma", m );
 
     // Pi as QD
@@ -1390,15 +1455,11 @@ PyMODINIT_FUNC initqd(void)
     PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "pi", m );
     // E as QD
     m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
-    c_qd_read(
-      "2.7182818284590452353602874713526624977572470936999595749669676277241",
-      ((PyQDTypeObject *) m)->content_data);
+    c_qd_read( const_e, ((PyQDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "e", m );
     // Gamma as QD
     m = PyType_GenericNew( &PyQDTypeObjectType, NULL, NULL);
-    c_qd_read(
-      "0.5772156649015328606065120900824024310421593359399235988057672348849",
-      ((PyQDTypeObject *) m)->content_data);
+    c_qd_read( const_gamma, ((PyQDTypeObject *) m)->content_data);
     PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "gamma", m );
 
     m = Py_InitModule3("qd", functions,
@@ -1407,6 +1468,22 @@ PyMODINIT_FUNC initqd(void)
             return;
 
     Py_INCREF(&PyQDTypeObjectType);
+    Py_INCREF(&PyDDTypeObjectType);
     PyModule_AddObject(m, "QD", (PyObject *)&PyQDTypeObjectType);
     PyModule_AddObject(m, "DD", (PyObject *)&PyDDTypeObjectType);
+
+#ifdef WITH_NUMPY
+    PyArray_Descr *QD_dtype;
+    import_array();
+    PyArray_InitArrFuncs(&QDArr_functions);
+    //NumpyQDArray.ob_type = &PyArrayDescr_Type;
+    QD_dtype = PyArray_DescrFromType( PyArray_RegisterDataType( &NumpyQDArray ) );
+    Py_XINCREF(QD_dtype);
+    if( QD_dtype != NULL) {
+      PyDict_SetItemString( (PyObject *)  ( (&PyQDTypeObjectType)->tp_dict ), "dtype",
+                      (PyObject *) QD_dtype );
+    }
+#endif
+
+    return;
 }
