@@ -30,11 +30,11 @@ Using the module is very easy; first import it with:
 
     import qd
 
-Before starting to do dome computation with the DD or QD types provided by the module, you should set the FPU in the needed state with:
+Before starting to do some computation with the DD or QD types provided by the module, you should set the FPU in the needed state with:
 
     init_state = qd.fpu_init()
 
-When your code doesn't require computing with the new types any longer, restore the state of the FPU with:
+(This is a transparent wrapper for the initializer of the QD library.) When your code doesn't require computing with the new types any longer, restore the state of the FPU with:
 
     qd.fpu_restore(init_state)
 
