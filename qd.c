@@ -1393,8 +1393,7 @@ static PyArray_Descr NumpyDDArray = {
                                  * '>' (big), '<' (little), '|'
                                  * (not-applicable), or '=' (native).
                                  */
-        // TODO: determine whether NPY_USE_GETITEM should be used below or not.
-        0,        /* flags describing data type */
+        NPY_USE_GETITEM|NPY_USE_SETITEM,        /* flags describing data type */
         0,                      /* number representing this type */
         4*sizeof(double),       /* element size for this type */
         _ALIGN(double),         /* alignment needed for this type TODO: check*/
@@ -1505,8 +1504,7 @@ static PyArray_Descr NumpyQDArray = {
                                  * '>' (big), '<' (little), '|'
                                  * (not-applicable), or '=' (native).
                                  */
-        // TODO: determine whether NPY_USE_GETITEM should be used below or not.
-        0,        /* flags describing data type */
+        NPY_USE_GETITEM|NPY_USE_SETITEM,        /* flags describing data type */
         0,                      /* number representing this type */
         4*sizeof(double),       /* element size for this type */
         _ALIGN(double),         /* alignment needed for this type TODO: check*/
