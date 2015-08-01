@@ -25,11 +25,23 @@ typedef struct {
     PyObject_HEAD;
     double content_data[4];
 } PyQDTypeObject;
-unsigned int fpu_state;
 /* ========================================================================== */
 
-static PyObject *fpu_init(PyObject *s, PyObject *a) { fpu_fix_start(&fpu_state); Py_RETURN_NONE; }
-static PyObject *fpu_restore(PyObject *s, PyObject *a) { fpu_fix_end(&fpu_state); Py_RETURN_NONE; }
+static PyObject *fpu_init(PyObject *s, PyObject *a) {
+        unsigned int fpu_state;
+        fpu_fix_start(&fpu_state);
+        return PyLong_FromUnsignedLong( fpu_state );
+}
+static PyObject *fpu_restore(PyObject *s, PyObject *a) {
+        unsigned int fpu_state;
+        if(!PyLong_Check(a)) {
+            PyErr_SetString(PyExc_TypeError,"Wrong type for argument of fpu_restore");
+            return NULL;
+        }
+        fpu_state = PyLong_AsUnsignedLongMask(a);
+        fpu_fix_end(&fpu_state);
+        Py_RETURN_NONE;
+}
 
 #define DD_GENERICWRAPPER1(f,self) \
             PyObject *o; \
@@ -1357,7 +1369,7 @@ static PyTypeObject PyQDTypeObjectType = {
 
 static PyMethodDef functions[] = {
         {"fpu_init", fpu_init, METH_NOARGS,"Initialize the FPU state for using the QD library. The function should be called before computing with DD or QD types. The initial state of the FPU can be reset later with the function fpu_restore()."},
-        {"fpu_restore", fpu_restore, METH_NOARGS,"Restore the initial FPU state."},
+        {"fpu_restore", fpu_restore, METH_O,"Restore the initial FPU state."},
         { NULL, NULL, 0, NULL }
 };
 

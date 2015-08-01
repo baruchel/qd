@@ -32,11 +32,11 @@ Using the module is very easy; first import it with:
 
 Before starting to do dome computation with the DD or QD types provided by the module, you should set the FPU in the needed state with:
 
-    qd.fpu_init()
+    init_state = qd.fpu_init()
 
 When your code doesn't require computing with the new types any longer, restore the state of the FPU with:
 
-    qd.fpu_restore()
+    qd.fpu_restore(init_state)
 
 Now you can start computing with both types:
 
