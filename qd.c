@@ -1395,7 +1395,7 @@ static PyArray_Descr NumpyDDArray = {
                                  */
         NPY_USE_GETITEM|NPY_USE_SETITEM,        /* flags describing data type */
         0,                      /* number representing this type */
-        4*sizeof(double),       /* element size for this type */
+        2*sizeof(double),       /* element size for this type */
         _ALIGN(double),         /* alignment needed for this type TODO: check*/
         NULL,                   /*
                                  * Non-NULL if this type is

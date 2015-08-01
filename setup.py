@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-myversion = '0.1.5 alpha'
+myversion = '0.1.6 alpha'
 
 # Without Numpy
 # =============
