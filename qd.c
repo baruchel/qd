@@ -1,4 +1,5 @@
 // comment the following line for disabling Numpy
+// (EDIT also the setupy.py and comment/uncomment accordingly.)
 // DON'T UNCOMMENT THIS LINE; SUPPORT IS FAR FROM BEING READY!!!
 // #define WITH_NUMPY
 
@@ -1375,7 +1376,120 @@ static PyMethodDef functions[] = {
 
 #define _ALIGN(type) offsetof(struct { char c; type v;}, v)
         
+static PyArray_ArrFuncs DDArr_functions;
 static PyArray_ArrFuncs QDArr_functions;
+
+static PyArray_Descr NumpyDDArray = {
+        PyObject_HEAD_INIT(NULL)
+        &PyDDTypeObjectType,    /*
+                                 * the type object representing an
+                                 * instance of this type -- should not
+                                 * be two type_numbers with the same type
+                                 * object.
+                                 */
+        'V',                    /* kind for this type */
+        '0',                    /* unique-character representing this type */
+        '|',                    /*
+                                 * '>' (big), '<' (little), '|'
+                                 * (not-applicable), or '=' (native).
+                                 */
+        // TODO: determine whether NPY_USE_GETITEM should be used below or not.
+        0,        /* flags describing data type */
+        0,                      /* number representing this type */
+        4*sizeof(double),       /* element size for this type */
+        _ALIGN(double),         /* alignment needed for this type TODO: check*/
+        NULL,                   /*
+                                 * Non-NULL if this type is
+                                 * is an array (C-contiguous)
+                                 * of some other type
+                                 */
+        NULL,                 /* The fields dictionary for this type
+                                 * For statically defined descr this
+                                 * is always Py_None
+                                 */
+
+        NULL,                   /*
+                                 * An ordered tuple of field names or NULL
+                                 * if no fields are defined
+                                 */
+
+        &DDArr_functions,        /* PyArray_ArrFuncs *f;
+                                  * a table of functions specific for each
+                                  * basic data descriptor
+                                  */
+
+        //PyObject *metadata,     /* Metadata about this dtype */
+};
+
+//typedef void (PyArray_CopySwapNFunc)(void *, npy_intp, void *, npy_intp, npy_intp, int, void *);
+static void DDArr_copyswapn(void *dst, npy_intp x, void *src, npy_intp y,
+                                     npy_intp z, int swap, void *arr) {
+        fprintf(stdout,"DEBUG: copyswapn (swap=%d)\n",swap);
+}
+
+static void DDArr_copyswap(void *dst, void *src, int swap, void *arr)
+{
+        fprintf(stdout,"DEBUG: copyswap (swap=%d)\n",swap);
+    if (src != NULL) 
+	memcpy(dst, src, 2*sizeof(double));
+    
+    if (swap) { // TODO !
+        double *a, *b;
+        double c;
+        a = ((double *)dst); b = a + 1;
+	c = *a; *a++ = *b; *b-- = c;
+    }
+}
+
+static PyObject *DDArr_getitem(char *ip, PyArrayObject *ap) {
+        // Simpler example found on internet:
+// cdef object getitem(hobj_ref_t *ip, ndarray ap):
+//     cdef reference ret
+//     ret = reference(None)
+//     ret.ref = ip[0]
+//     return ret
+    PyObject *o;
+    double a[2];
+ 
+    if ((ap==NULL) || PyArray_ISBEHAVED_RO(ap)) {
+	a[0] = *((double *)ip);
+	a[1] = *((double *)ip + 1);
+    }
+    else {
+        fprintf(stdout,"DEBUG: getitem (case 2)\n");
+	ap->descr->f->copyswap(a, ip, !PyArray_ISNOTSWAPPED(ap), ap);
+    }
+    o = PyType_GenericNew( &PyDDTypeObjectType, NULL, NULL);
+    ((PyDDTypeObject *) o)->content_data[0] = a[0];
+    ((PyDDTypeObject *) o)->content_data[1] = a[1];
+    return o;
+}
+
+static int DDArr_setitem(PyObject *op, char *ov, PyArrayObject *ap) {
+    double a[2];
+
+    if(PyObject_TypeCheck(op, &PyDDTypeObjectType)) {
+        a[0] = ((PyDDTypeObject *) op)->content_data[0];
+        a[1] = ((PyDDTypeObject *) op)->content_data[1];
+    } else {
+        PyObject *o;
+        o = PyTuple_Pack(1, op);
+        op = PyObject_CallObject((PyObject *)&PyDDTypeObjectType, o);
+        Py_DECREF(o);
+        a[0] = ((PyDDTypeObject *) op)->content_data[0];
+        a[1] = ((PyDDTypeObject *) op)->content_data[1];
+        Py_DECREF(op);
+    }
+
+    if (ap == NULL || PyArray_ISBEHAVED(ap)) {
+	memcpy(ov, a, 2*sizeof(double));
+    }
+    else {
+        fprintf(stdout,"DEBUG: setitem (case 2)\n");
+	ap->descr->f->copyswap(ov, a, !PyArray_ISNOTSWAPPED(ap), ap);
+    }
+    return 0;
+}
 
 static PyArray_Descr NumpyQDArray = {
         PyObject_HEAD_INIT(NULL)
@@ -1391,8 +1505,8 @@ static PyArray_Descr NumpyQDArray = {
                                  * '>' (big), '<' (little), '|'
                                  * (not-applicable), or '=' (native).
                                  */
-        // TODO: Check whether GETITEM is required (try to replace with 0)
-        NPY_USE_GETITEM,        /* flags describing data type */
+        // TODO: determine whether NPY_USE_GETITEM should be used below or not.
+        0,        /* flags describing data type */
         0,                      /* number representing this type */
         4*sizeof(double),       /* element size for this type */
         _ALIGN(double),         /* alignment needed for this type TODO: check*/
@@ -1418,6 +1532,12 @@ static PyArray_Descr NumpyQDArray = {
 
         //PyObject *metadata,     /* Metadata about this dtype */
 };
+
+//typedef void (PyArray_CopySwapNFunc)(void *, npy_intp, void *, npy_intp, npy_intp, int, void *);
+static void QDArr_copyswapn(void *dst, npy_intp x, void *src, npy_intp y,
+                                     npy_intp z, int swap, void *arr) {
+        fprintf(stdout,"DEBUG: copyswapn (swap=%d)\n",swap);
+}
 
 static void QDArr_copyswap(void *dst, void *src, int swap, void *arr)
 {
@@ -1553,11 +1673,26 @@ PyMODINIT_FUNC initqd(void)
     PyModule_AddObject(m, "QD", (PyObject *)&PyQDTypeObjectType);
 
 #ifdef WITH_NUMPY
+    PyArray_Descr *DD_dtype;
     PyArray_Descr *QD_dtype;
 
     import_array();
+
+    PyArray_InitArrFuncs(&DDArr_functions);
+    DDArr_functions.copyswap = (PyArray_CopySwapFunc *) DDArr_copyswap;
+    DDArr_functions.copyswapn = (PyArray_CopySwapNFunc *) DDArr_copyswapn;
+    DDArr_functions.getitem = (PyArray_GetItemFunc *) DDArr_getitem;
+    DDArr_functions.setitem = (PyArray_SetItemFunc *) DDArr_setitem;
+    NumpyDDArray.ob_type = &PyArrayDescr_Type;
+    DD_dtype = PyArray_DescrFromType( PyArray_RegisterDataType( &NumpyDDArray ) );
+    Py_XINCREF(DD_dtype);
+    if( DD_dtype != NULL) {
+      PyDict_SetItemString( (PyObject *)  ( (&PyDDTypeObjectType)->tp_dict ), "dtype",
+                      (PyObject *) DD_dtype );
+    }
     PyArray_InitArrFuncs(&QDArr_functions);
-    QDArr_functions.copyswap = QDArr_copyswap;
+    QDArr_functions.copyswap = (PyArray_CopySwapFunc *) QDArr_copyswap;
+    QDArr_functions.copyswapn = (PyArray_CopySwapNFunc *) QDArr_copyswapn;
     QDArr_functions.getitem = (PyArray_GetItemFunc *) QDArr_getitem;
     QDArr_functions.setitem = (PyArray_SetItemFunc *) QDArr_setitem;
     NumpyQDArray.ob_type = &PyArrayDescr_Type;

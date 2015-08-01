@@ -7,7 +7,7 @@ The QD module for Python is a wrapper for the high-precision old and famous [QD]
 
 The wrapper has been written in C with the API provided with CPython in order to be as quick as possible. It was written and tried with Python 2.
 
-A new version will allow later to use these new types ad Numpy dtypes.
+A new version will allow later to use these new types ad Numpy dtypes. *If you want to see what the support will look like, just uncomment the first line of the C file (and comment/uncomment accordingly in the setup.py file); both dtypes have been added (qd.DD.dtype and qd.QD.dtype); however functions have not been implemented and the support is useless for anything more than setting/extracting values from an array (furthermore, some DEBUG messages will be printed).*
 
 ### Compilation of the module
 
